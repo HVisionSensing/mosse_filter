@@ -1,6 +1,7 @@
 #include "MosseFilter.h"
 
 
+namespace ac {
 
 /*
  * Service functions
@@ -151,7 +152,7 @@ cv::Mat MosseFilter::correlate(cv::Mat image) {
     for(int x = 0; x < filter_.cols; x++)
         for(int y = 0; y < filter_.rows; y++) {
             G.at<float[2]>(y,x)[0] = filter_.at<float[2]>(y,x)[0]*preprocessed.at<float[2]>(y,x)[0];
-            G.at<float[2]>(y,x)[1] = filter_.at<float[2]>(y,x)[1]*preprocessed.at<float[2]>(y,x)[1];
+            G.at<float[2]>(y,x)[1] = filter_.at<float[2]>(y,x)[0]*preprocessed.at<float[2]>(y,x)[1];
         }
 
     cv::Mat g;
@@ -161,16 +162,19 @@ cv::Mat MosseFilter::correlate(cv::Mat image) {
     cv::split(g,splitted);
 
     double min, max;
-    cv::minMaxLoc(splitted[0],&min,&max);
+    cv::Point minp, maxp;
+    cv::minMaxLoc(splitted[0],&min,&max,&minp,&maxp);
 
     cv::Mat res(splitted[0].rows,splitted[0].cols,cv::DataType<unsigned char>::type);
-
-    std::cout << "Min " << min << " Max " << max << std::endl;
 
     for(int x = 0; x < splitted[0].cols; x++)
         for(int y = 0; y < splitted[0].rows; y++)
             res.at<unsigned char>(y,x) = (abs(min) + splitted[0].at<float>(y,x))*255/(max+abs(min));
 
+    cv::circle(res,maxp,20,cv::Scalar(255,255,255));
+
     return res;
     //return splitted[0];
 }
+
+} // End of namespace

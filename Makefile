@@ -22,11 +22,11 @@ all: $(SOURCES) $(EXECUTABLE)
 
 $(BUILDDIR)%.o: $(SOURCEDIR)%.cpp
 	@echo Compiling $< into $@ ...
-	@$(CC) $(PFLAGS) $(CFLAGS) -c $< -o $@
+	@$(CC) $(ADDARG) $(PFLAGS) $(CFLAGS) -c $< -o $@
 
 $(EXECUTABLE): $(OBJECTS) 
 	@echo Making executable file $@...
-	@$(CC) $(OBJECTS) $(LDFLAGS) -o $@
+	@$(CC) $(ADDARG) $(OBJECTS) $(LDFLAGS) -o $@
 
 clean:
 	@echo Deleting files $(OBJECTS) $(EXECUTABLE)...

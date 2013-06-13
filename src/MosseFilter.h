@@ -8,6 +8,8 @@
 
 #include "tools.hpp"
 
+namespace ac {
+
 typedef cv::Mat (*functionROI)(cv::Point p, cv::Size size, double sigma); // = 100.0);
 
 class MosseFilter {
@@ -41,5 +43,7 @@ cv::Mat resizeWin(cv::Mat image);
 cv::Mat createPointTarget(cv::Point p,cv::Size s, double sigma = 100.0);
 
 cv::Mat addComplexPlane(cv::Mat real);
+
+} // End of namespace
 
 #endif // MOSSEFILTER_H

@@ -3,10 +3,11 @@
 #include <fstream>
 #include <iostream>
 
+#include <vector>
+
 #include <opencv2/opencv.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
 
-//#include "MosseFilter_old.h"
 #include "MosseFilter.h"
 
 #ifdef DATA_DIRECTORY
@@ -18,82 +19,10 @@
 const std::string testVideoFileName = DATA_DIRECTORY"short_md.mov";
 const std::string reporterFileName = "reporter.txt";
 
-int main() {
+int main(const int argn,const char** args) {
+    std::vector<std::string> arguments; for(int i = 1; i < argn; i++) arguments.push_back(std::string(args[i]));
 
-    #ifndef MOSSEFILTER_H
-    std::ofstream reporter(reporterFileName.c_str(),std::fstream::app);
-
-    CvCapture* capture = cvCaptureFromFile(testVideoFileName.c_str());//cvCaptureFromCAM(0); //
-
-    double fps = cvGetCaptureProperty(capture,CV_CAP_PROP_FPS);
-    if(fps == -1)
-        fps = 30; // Default webcam FPS
-
-    if(capture == NULL)
-        throw "Can't load VideoCapture.\n";
-
-    reporter << "=============================================\n";
-    reporter << "\t Current video: " << testVideoFileName << "\n";
-
-    cvNamedWindow("Result");
-    cvNamedWindow("Origin");
-
-    IplImage* train_img = cvQueryFrame(capture);
-    IplImage* train_img_copy = cvCreateImage(cvSize(train_img->width,train_img->height),train_img->depth,train_img->nChannels);
-    cvCopy(train_img,train_img_copy);
-    cvShowImage("Result",train_img_copy);
-
-    CvPoint point = cvPoint(train_img->width/2,train_img->height/2);
-    MosseFilter mosse(cvSize(train_img->width,train_img->height),21,point);
-    mosse.addTraining(train_img_copy,point); // Training of the filter
-    mosse.create();
-
-    clock_t now;
-    clock_t nowafter;
-    double elapsed_preprocess = 0;
-    double elapsed_apply = 0;
-
-    IplImage* res;
-    IplImage* frame;
-    IplImage* frame_copy = cvCreateImage(cvSize(train_img->width,train_img->height),train_img->depth,train_img->nChannels);
-    int last_key = -1;
-
-    while(last_key != 32) {
-        last_key = cvWaitKey(1000/fps - elapsed_preprocess - elapsed_apply);
-
-        frame = cvQueryFrame(capture);
-
-        if(frame == NULL)
-            break;
-
-        cvCopy(frame,frame_copy);
-
-        now = clock();
-        fftw_complex* preprocessed = mosse.preprocessImage(frame_copy);
-        nowafter = clock();
-        elapsed_preprocess = double(nowafter - now) / CLOCKS_PER_SEC;
-
-        now = clock();
-        res = mosse.apply(preprocessed);
-        nowafter = clock();
-        elapsed_apply = double(nowafter - now) / CLOCKS_PER_SEC;
-
-        reporter << "P: " << elapsed_preprocess << " A: " << elapsed_apply << std::endl;
-        std::cout << "P: " << elapsed_preprocess << " A: " << elapsed_apply << std::endl;
-
-        cvShowImage("Result",res);
-        cvShowImage("Origin",frame);
-    }
-
-    reporter.close();
-
-    //cvDestroyWindow("Result");
-    //cvReleaseCapture(&capture);
-
-    //delete train_img;
-    //delete frame;
-    //delete res;
-#endif
+    if(std::find(arguments.begin(),arguments.end(),std::string("test")) != arguments.end()) {
     //createPointTarget(cv::Point(50,50),cv::Size(100,150));
 
     //std::cout << meanUnit(cv::imread(DATA_DIRECTORY"2.jpg",CV_LOAD_IMAGE_GRAYSCALE)).at<double>(100,100) << std::endl;
@@ -103,10 +32,10 @@ int main() {
     //cv::imshow("Cosine window",createCosineWindow(cv::Size(100,100)));
     //cv::waitKey();
 
-    //preprocessImage(cv::imread(DATA_DIRECTORY"2.jpg",CV_LOAD_IMAGE_GRAYSCALE));
-    //#undef MOSSEFILTER_H
+    ac::preprocessImage(cv::imread(DATA_DIRECTORY"2.jpg",CV_LOAD_IMAGE_GRAYSCALE));
 
-#ifdef MOSSEFILTER_H
+    } else if(std::find(arguments.begin(),arguments.end(),std::string("main")) != arguments.end() || argn == 1) {
+
     std::ofstream reporter(reporterFileName.c_str(),std::fstream::app);
 
     //cv::VideoCapture capture(0);
@@ -130,7 +59,7 @@ int main() {
 
     cv::Point point(train_img.cols/2,train_img.rows/2);
 
-    MosseFilter mosse(cv::Size(train_img.cols,train_img.rows));
+    ac::MosseFilter mosse(cv::Size(train_img.cols,train_img.rows));
     mosse.addTraining(train_img,point); // Training of the filter
 
     clock_t now;
@@ -163,6 +92,44 @@ int main() {
     }
 
     reporter.close();
+    } else if(std::find(arguments.begin(),arguments.end(),std::string("measure")) != arguments.end()) {
 
-#endif
+    const int measure_times = 50;
+
+    clock_t now;
+    clock_t nowafter;
+    double elapsed_train = 0;
+    double elapsed_apply = 0;
+
+    cv::Mat image = cv::imread(DATA_DIRECTORY"3.jpg",CV_LOAD_IMAGE_GRAYSCALE);
+
+    std::ofstream measures("work_time.txt");
+
+    while(image.cols > 15 && image.rows > 15) {
+        elapsed_train = 0;
+        elapsed_apply = 0;
+
+        measures << "Image size: " << image.cols << "x" << image.rows << std::endl;
+
+        for(int i = 0; i < measure_times; i++) {
+            ac::MosseFilter mosse(cv::Size(image.cols,image.rows));
+
+            now = clock();
+            mosse.addTraining(image,cv::Point(image.cols/2,image.rows/2));
+            nowafter = clock();
+            elapsed_train += double(nowafter - now) / CLOCKS_PER_SEC;
+
+            now = clock();
+            mosse.correlate(image);
+            nowafter = clock();
+            elapsed_apply += double(nowafter - now) / CLOCKS_PER_SEC;
+        }
+
+        cv::resize(image,image,cv::Size(image.cols - 10,image.rows - 10));
+
+        measures << "\tTrain: " << elapsed_train/measure_times << " , Apply: " << elapsed_apply/measure_times << std::endl;
+    }
+
+    measures.close();
+    }
 }
