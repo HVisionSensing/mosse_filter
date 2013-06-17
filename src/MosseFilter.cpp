@@ -105,6 +105,48 @@ cv::Mat createCosineWindow(cv::Size size) {
     return cosine_window;
 }
 
+cv::Mat mulC(cv::Mat& first, cv::Mat& second) {
+    if(first.cols != second.cols || first.rows != second.rows)
+        throw "Size of both matrix should be equal";
+
+    cv::Mat res = addComplexPlane(cv::Mat(first.rows,first.cols,cv::DataType<float>::type));
+
+    for(int x = 0; x < first.cols; x++)
+        for(int y = 0; y < first.rows; y++) {
+            float x1 = first.at<float[2]>(y,x)[0];
+            float x2 = second.at<float[2]>(y,x)[0];
+            float y1 = first.at<float[2]>(y,x)[1];
+            float y2 = second.at<float[2]>(y,x)[1];
+
+            res.at<float[2]>(y,x)[0] = x1*x2-y1*y2;
+            res.at<float[2]>(y,x)[1] = x1*y2+y1*x2;
+       }
+
+    return res;
+}
+
+cv::Mat divC(cv::Mat& first, cv::Mat& second) {
+    if(first.cols != second.cols || first.rows != second.rows)
+        throw "Size of both matrix should be equal";
+
+    cv::Mat res = addComplexPlane(cv::Mat(first.rows,first.cols,cv::DataType<float>::type));
+
+    for(int x = 0; x < first.cols; x++)
+        for(int y = 0; y < first.rows; y++) {
+            float x1 = first.at<float[2]>(y,x)[0];
+            float x2 = second.at<float[2]>(y,x)[0];
+            float y1 = first.at<float[2]>(y,x)[1];
+            float y2 = second.at<float[2]>(y,x)[1];
+
+            float xy = x2*x2 + y2*y2;
+
+            res.at<float[2]>(y,x)[0] = (x1*x2+y1*y2)/xy;
+            res.at<float[2]>(y,x)[1] = (-x1*y2+y1*x2)/xy;
+       }
+
+    return res;
+}
+
 /*
  * MOSSE Filter implementation
  */
@@ -140,20 +182,32 @@ void MosseFilter::addTraining(cv::Mat image, cv::Point p) {
 
     N_ += G.mul(conjF);
     D_ += F.mul(conjF) + 100;
+    //N_ += mulC(G,conjF);
+    //D_ += mulC(F,conjF) + 100;
 
-    filter_ = N_/D_;
+    //filter_ = N_/D_;
+    filter_ = divC(N_,D_);
 }
 
 cv::Mat MosseFilter::correlate(cv::Mat image) {
     cv::Mat preprocessed = preprocessImage(image);
 
     //cv::Mat G = filter_.mul(preprocessed); // Doesn't works :(
+    /*
     cv::Mat G = addComplexPlane(cv::Mat(filter_.rows,filter_.cols,cv::DataType<float>::type));
     for(int x = 0; x < filter_.cols; x++)
         for(int y = 0; y < filter_.rows; y++) {
-            G.at<float[2]>(y,x)[0] = filter_.at<float[2]>(y,x)[0]*preprocessed.at<float[2]>(y,x)[0];
-            G.at<float[2]>(y,x)[1] = filter_.at<float[2]>(y,x)[0]*preprocessed.at<float[2]>(y,x)[1];
-        }
+            float x1 = filter_.at<float[2]>(y,x)[0];
+            float x2 = preprocessed.at<float[2]>(y,x)[0];
+            float y1 = filter_.at<float[2]>(y,x)[1];
+            float y2 = preprocessed.at<float[2]>(y,x)[1];
+
+            G.at<float[2]>(y,x)[0] = x1*x2-y1*y2;
+            G.at<float[2]>(y,x)[1] = x1*y2+y1*x2;
+       }
+    */
+
+    cv::Mat G = mulC(filter_,preprocessed);
 
     cv::Mat g;
     cv::idft(G,g);

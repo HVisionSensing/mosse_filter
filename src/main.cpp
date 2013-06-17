@@ -94,7 +94,7 @@ int main(const int argn,const char** args) {
     reporter.close();
     } else if(std::find(arguments.begin(),arguments.end(),std::string("measure")) != arguments.end()) {
 
-    const int measure_times = 50;
+    const int measure_times = 10;
 
     clock_t now;
     clock_t nowafter;
@@ -109,7 +109,7 @@ int main(const int argn,const char** args) {
         elapsed_train = 0;
         elapsed_apply = 0;
 
-        measures << "Image size: " << image.cols << "x" << image.rows << std::endl;
+        measures << image.cols << "x" << image.rows << "\t";
 
         for(int i = 0; i < measure_times; i++) {
             ac::MosseFilter mosse(cv::Size(image.cols,image.rows));
@@ -127,7 +127,7 @@ int main(const int argn,const char** args) {
 
         cv::resize(image,image,cv::Size(image.cols - 10,image.rows - 10));
 
-        measures << "\tTrain: " << elapsed_train/measure_times << " , Apply: " << elapsed_apply/measure_times << std::endl;
+        measures << elapsed_train/measure_times << "\t" << elapsed_apply/measure_times << std::endl;
     }
 
     measures.close();

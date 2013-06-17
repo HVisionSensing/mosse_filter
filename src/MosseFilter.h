@@ -44,6 +44,9 @@ cv::Mat createPointTarget(cv::Point p,cv::Size s, double sigma = 100.0);
 
 cv::Mat addComplexPlane(cv::Mat real);
 
+cv::Mat mulC(cv::Mat& first, cv::Mat& second);
+cv::Mat divC(cv::Mat& first, cv::Mat& second);
+
 } // End of namespace
 
 #endif // MOSSEFILTER_H
